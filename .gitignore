@@ -12,3 +12,6 @@ tsconfig.tsbuildinfo
 
 .vercel
 .env*
+.agents/
+.claude/skills/
+skills-lock.json
