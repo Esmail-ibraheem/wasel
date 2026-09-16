@@ -10,14 +10,22 @@ const db = new PrismaClient();
 const DEMO_API_KEY = "wsl_demo_0123456789abcdef0123456789abcdef01234567";
 
 async function main() {
-  // Wallet catalog (idempotent: templates are only created for new wallets)
+  // Wallet catalog (idempotent: new wallets are created; existing wallets only gain templates they lack, by name)
   for (const w of SEED_WALLETS) {
-    const existing = await db.wallet.findUnique({ where: { code: w.code } });
-    if (existing) continue;
-    await db.wallet.create({
-      data: { code: w.code, name: w.name, senderIds: JSON.stringify(w.senderIds), templates: { create: w.templates } },
-    });
-    console.log(`wallet ${w.code} created`);
+    const existing = await db.wallet.findUnique({ where: { code: w.code }, include: { templates: { select: { name: true } } } });
+    if (!existing) {
+      await db.wallet.create({
+        data: { code: w.code, name: w.name, senderIds: JSON.stringify(w.senderIds), templates: { create: w.templates } },
+      });
+      console.log(`wallet ${w.code} created`);
+      continue;
+    }
+    const have = new Set(existing.templates.map((t) => t.name));
+    const missing = w.templates.filter((t) => !have.has(t.name));
+    if (missing.length) {
+      await db.messageTemplate.createMany({ data: missing.map((t) => ({ ...t, walletId: existing.id })) });
+      console.log(`wallet ${w.code}: added ${missing.length} template(s)`);
+    }
   }
 
   // Platform super admin

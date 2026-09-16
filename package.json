@@ -12,6 +12,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
+    "samples:check": "tsx scripts/check-samples.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
