@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requirePermission, requireUser } from "@/lib/auth/session";
+import { getCurrentUser, requirePermission } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { audit } from "@/lib/audit";
 import { passwordSchema } from "@/lib/validation";
@@ -19,8 +19,10 @@ export async function updateBusiness(_prev: ActionState, formData: FormData): Pr
   return { ok: true, message: "تم حفظ الإعدادات." };
 }
 
+/** Any signed-in user (tenant member or platform admin) may change their own password. */
 export async function changeOwnPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, message: "انتهت الجلسة. سجّل الدخول مجددًا." };
   const current = String(formData.get("current") ?? "");
   const next = passwordSchema.safeParse(formData.get("password"));
   if (!next.success) return { ok: false, errors: { password: next.error.issues[0].message } };

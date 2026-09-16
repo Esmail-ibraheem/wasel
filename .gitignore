@@ -8,3 +8,7 @@ out
 coverage
 
 tsconfig.tsbuildinfo
+.vercel
+
+.vercel
+.env*

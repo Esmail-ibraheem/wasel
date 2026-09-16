@@ -8,6 +8,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin", label: "المنشآت", icon: "building", exact: true },
     { href: "/admin/wallets", label: "المحافظ والأنماط", icon: "wallet" },
     { href: "/admin/tester", label: "اختبار التحليل", icon: "messages" },
+    { href: "/admin/account", label: "حساب المشرف", icon: "settings" },
   ];
   return (
     <AppShell
