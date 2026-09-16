@@ -79,6 +79,24 @@ docs/superpowers/specs/     وثيقة التصميم
 كل نمط هو تعبير نمطي JavaScript بمجموعات مسماة (`amount` إلزامية؛ `currency`, `senderName`, `senderPhone`, `reference`, `date`, `time`, `account`, `balance` اختيارية)
 ويُعدَّل من لوحة المشرف دون نشر جديد. استخدم «اختبار التحليل» للتأكد من أي نص قبل الاعتماد عليه.
 
+## النشر (تجريبي)
+
+الخادم يحتاج بيئة Node.js دائمة التشغيل (لا يعمل على GitHub Pages أو الاستضافة الثابتة):
+
+```bash
+git clone https://github.com/Esmail-ibraheem/wasel.git && cd wasel
+pnpm install
+cp .env.example .env          # DATABASE_URL="file:./dev.db"
+pnpm db:push && pnpm db:seed  # قاعدة SQLite + الحسابات التجريبية
+pnpm build && pnpm start      # http://localhost:3000
+```
+
+- ضع الخادم خلف HTTPS (Caddy أو nginx) قبل استخدامه مع بيانات حقيقية؛ الكوكي الآمن يُفعَّل تلقائيًا في وضع الإنتاج.
+- **غيّر كلمات مرور الحسابات التجريبية أو احذف المنشأة التجريبية** بعد أول تشغيل (`admin` خاصة).
+- SQLite مناسب لخادم واحد. للانتقال إلى Postgres غيّر `provider` في `prisma/schema.prisma` و`DATABASE_URL` ثم `pnpm db:push`.
+- الإشعارات الفورية (SSE) تعمل داخل عملية واحدة؛ عند التوسع لأكثر من نسخة يلزم Redis pub/sub.
+- منصات مثل Railway / Render / Fly.io تعمل مباشرة مع هذا الإعداد (أضف قرصًا دائمًا لملف `dev.db`). Vercel لا يحفظ SQLite بين الطلبات — استخدم Postgres هناك.
+
 ## ما لم يُنفذ بعد (مقصود)
 
 تطبيق أندرويد لتمرير الرسائل، التحقق عبر API رسمي للمحفظة، ربط التحويل بفاتورة، تصدير Excel/PDF، سياسة الاحتفاظ الآلي، وتوزيع SSE على أكثر من خادم (يتطلب Redis).
