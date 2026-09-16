@@ -95,7 +95,12 @@ pnpm build && pnpm start      # http://localhost:3000
 - **غيّر كلمات مرور الحسابات التجريبية أو احذف المنشأة التجريبية** بعد أول تشغيل (`admin` خاصة).
 - SQLite مناسب لخادم واحد. للانتقال إلى Postgres غيّر `provider` في `prisma/schema.prisma` و`DATABASE_URL` ثم `pnpm db:push`.
 - الإشعارات الفورية (SSE) تعمل داخل عملية واحدة؛ عند التوسع لأكثر من نسخة يلزم Redis pub/sub.
-- **Railway (جاهز):** المستودع يحتوي `Dockerfile` و`railway.json`. أنشئ خدمة من هذا المستودع، أضف Volume على المسار `/data`، واضبط المتغيرات:
+- **Vercel + Neon (مجاني، جاهز):** انقر
+  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FEsmail-ibraheem%2Fwasel&project-name=wasel&repository-name=wasel&env=ADMIN_USERNAME,ADMIN_PASSWORD&envDescription=%D8%AD%D8%B3%D8%A7%D8%A8%20%D9%85%D8%B4%D8%B1%D9%81%20%D8%A7%D9%84%D9%85%D9%86%D8%B5%D8%A9%20(%2Fadmin))
+  ثم من تبويب **Storage** أضف قاعدة **Neon Postgres** (المجانية) واربطها بالمشروع — تُضاف `DATABASE_URL` و`DATABASE_URL_UNPOOLED` تلقائيًا — وأعد النشر.
+  البناء على Vercel يستخدم `vercel-build`: مخطط Postgres (`prisma/schema.postgres.prisma`، مولَّد من `schema.prisma`) → `db push` → البذر → `next build`.
+  الإشعارات الفورية تعمل على serverless عبر استقصاء قاعدة البيانات كل 3 ثوانٍ (يعاد الاتصال تلقائيًا كل ~50 ثانية).
+- **Railway / أي Docker host:** المستودع يحتوي `Dockerfile` و`railway.json`. أنشئ خدمة من هذا المستودع، أضف Volume على المسار `/data`، واضبط المتغيرات:
   `DATABASE_URL=file:/data/wasel.db` · `ADMIN_USERNAME` · `ADMIN_PASSWORD` (اختياري: `SEED_DEMO=true` لإضافة المنشأة التجريبية).
   عند كل تشغيل يُنفَّذ `prisma db push` ثم البذر (المحافظ + المشرف إن لم يوجدا) ثم `next start`. فحص الصحة: `/api/health`.
 - Render / Fly.io: نفس الصورة مع قرص دائم على `/data`. Vercel لا يحفظ SQLite بين الطلبات — استخدم Postgres هناك.
