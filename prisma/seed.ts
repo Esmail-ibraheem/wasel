@@ -28,18 +28,29 @@ async function main() {
     }
   }
 
-  // Platform super admin
-  if (!(await db.user.findUnique({ where: { username: "admin" } }))) {
-    await db.user.create({
-      data: {
-        username: "admin",
-        fullName: "مشرف المنصة",
-        passwordHash: hashPassword("Admin@12345"),
-        role: "OWNER",
-        isSuperAdmin: true,
-      },
-    });
-    console.log("super admin created: admin / Admin@12345");
+  // Platform super admin.
+  // Production: credentials come from ADMIN_USERNAME / ADMIN_PASSWORD (skipped when unset).
+  // Development / SEED_DEMO=true: falls back to admin / Admin@12345.
+  const demo = process.env.SEED_DEMO === "true" || process.env.NODE_ENV !== "production";
+  const adminUsername = (process.env.ADMIN_USERNAME || (demo ? "admin" : "")).trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD || (demo ? "Admin@12345" : "");
+  if (adminUsername && adminPassword) {
+    const existingAdmin = await db.user.findUnique({ where: { username: adminUsername } });
+    if (!existingAdmin) {
+      await db.user.create({
+        data: { username: adminUsername, fullName: "مشرف المنصة", passwordHash: hashPassword(adminPassword), role: "OWNER", isSuperAdmin: true },
+      });
+      console.log(`super admin created: ${adminUsername}`);
+    } else if (process.env.ADMIN_PASSWORD && !existingAdmin.isSuperAdmin) {
+      console.log(`warning: ${adminUsername} exists but is not a super admin — not modified`);
+    }
+  } else {
+    console.log("no super admin seeded (set ADMIN_USERNAME and ADMIN_PASSWORD)");
+  }
+
+  if (!demo) {
+    console.log("production mode: demo business not seeded (set SEED_DEMO=true to add it)");
+    return;
   }
 
   // Demo business
@@ -130,7 +141,7 @@ async function main() {
 
   console.log("\nDemo accounts (password after the slash):");
   console.log("  owner / Owner@12345 · manager / Manager@12345 · accountant / Accountant@12345 · employee / Employee@12345");
-  console.log("  super admin: admin / Admin@12345");
+  console.log(`  super admin: ${adminUsername}`);
   console.log(`Demo phone API key: ${DEMO_API_KEY}`);
 }
 

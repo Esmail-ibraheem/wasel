@@ -95,7 +95,10 @@ pnpm build && pnpm start      # http://localhost:3000
 - **غيّر كلمات مرور الحسابات التجريبية أو احذف المنشأة التجريبية** بعد أول تشغيل (`admin` خاصة).
 - SQLite مناسب لخادم واحد. للانتقال إلى Postgres غيّر `provider` في `prisma/schema.prisma` و`DATABASE_URL` ثم `pnpm db:push`.
 - الإشعارات الفورية (SSE) تعمل داخل عملية واحدة؛ عند التوسع لأكثر من نسخة يلزم Redis pub/sub.
-- منصات مثل Railway / Render / Fly.io تعمل مباشرة مع هذا الإعداد (أضف قرصًا دائمًا لملف `dev.db`). Vercel لا يحفظ SQLite بين الطلبات — استخدم Postgres هناك.
+- **Railway (جاهز):** المستودع يحتوي `Dockerfile` و`railway.json`. أنشئ خدمة من هذا المستودع، أضف Volume على المسار `/data`، واضبط المتغيرات:
+  `DATABASE_URL=file:/data/wasel.db` · `ADMIN_USERNAME` · `ADMIN_PASSWORD` (اختياري: `SEED_DEMO=true` لإضافة المنشأة التجريبية).
+  عند كل تشغيل يُنفَّذ `prisma db push` ثم البذر (المحافظ + المشرف إن لم يوجدا) ثم `next start`. فحص الصحة: `/api/health`.
+- Render / Fly.io: نفس الصورة مع قرص دائم على `/data`. Vercel لا يحفظ SQLite بين الطلبات — استخدم Postgres هناك.
 
 ## ما لم يُنفذ بعد (مقصود)
 
