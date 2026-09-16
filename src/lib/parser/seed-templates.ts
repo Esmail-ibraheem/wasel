@@ -1,0 +1,150 @@
+/**
+ * Built-in wallet catalog with plausible message templates.
+ * No real samples were available at design time; every pattern is editable
+ * from the super-admin UI, so real formats can be plugged in without a deploy.
+ *
+ * Group names: amount, currency, senderName, senderPhone, reference, date, time, account, balance
+ */
+
+export interface SeedTemplate {
+  name: string;
+  pattern: string;
+  flags: string;
+  priority: number;
+  isActive: boolean;
+  sampleText: string;
+}
+
+export interface SeedWallet {
+  code: string;
+  name: string;
+  senderIds: string[];
+  templates: SeedTemplate[];
+}
+
+const CUR = "(?<currency>ريال يمني|ريال سعودي|ريال|ر\\.ي|YER|SAR|USD)?";
+const REF = "(?<reference>[A-Za-z0-9-]+)";
+const NUM = "[\\d.,]+";
+
+/** Low-priority safety net: any "received"-style message with an amount. Never matches outgoing transfers. */
+function genericTemplate(): SeedTemplate {
+  return {
+    name: "نمط عام (احتياطي)",
+    pattern:
+      "(?:تم استلام|استلمت|تم إيداع|تم ايداع|وصلك|أضيف|تم إضافة|received|credited)[\\s\\S]*?" +
+      `(?<amount>\\d[\\d.,]*)\\s*${CUR}` +
+      "(?:[\\s\\S]*?(?:من|from)\\s*(?<senderPhone>\\d{9,12}))?" +
+      `(?:[\\s\\S]*?(?:رقم العملية|رقم المرجع|المرجع|Ref|Reference|Txn|Transaction)\\s*[:#]?\\s*${REF})?`,
+    flags: "iu",
+    priority: -10,
+    isActive: true,
+    sampleText: "تم استلام 5000 ريال من 777000000 رقم العملية 42",
+  };
+}
+
+export const SEED_WALLETS: SeedWallet[] = [
+  {
+    code: "jaib",
+    name: "محفظة جيب",
+    senderIds: ["Jaib", "JAIB-YE"],
+    templates: [
+      {
+        name: "استلام تحويل",
+        pattern:
+          `تم استلام مبلغ\\s*(?<amount>${NUM})\\s*${CUR}\\s*من\\s*(?<senderPhone>\\d{9,12})` +
+          "(?:\\s*\\((?<senderName>[^)]+)\\))?" +
+          `[.\\s]*رقم العملية\\s*:?\\s*${REF}` +
+          `(?:[.\\s]*الرصيد\\s*:?\\s*(?<balance>${NUM}))?` +
+          "(?:[^\\d]*(?<date>\\d{4}[-/]\\d{2}[-/]\\d{2})\\s+(?<time>\\d{1,2}:\\d{2}))?",
+        flags: "iu",
+        priority: 10,
+        isActive: true,
+        sampleText:
+          "تم استلام مبلغ 50,000 ريال يمني من 777123456 (أحمد محمد). رقم العملية: 123456789. الرصيد: 120,000 ريال. 2026-09-16 14:35",
+      },
+      genericTemplate(),
+    ],
+  },
+  {
+    code: "floosak",
+    name: "فلوسك",
+    senderIds: ["Floosak", "FLOOSAK"],
+    templates: [
+      {
+        name: "إيداع في الحساب",
+        pattern:
+          `تم إيداع\\s*(?<amount>${NUM})\\s*${CUR}\\s*في حسابك من\\s*(?<senderName>.+?)\\s*(?<senderPhone>\\d{9,12})` +
+          `\\s*رقم المرجع\\s*:?\\s*${REF}` +
+          "(?:\\s*بتاريخ\\s*(?<date>[\\d/.-]+)\\s+(?<time>\\d{1,2}:\\d{2}))?" +
+          `(?:\\s*رصيدك\\s*:?\\s*(?<balance>${NUM}))?`,
+        flags: "iu",
+        priority: 10,
+        isActive: true,
+        sampleText:
+          "تم إيداع 25,000 YER في حسابك من محمد علي 771234567 رقم المرجع 987654321 بتاريخ 16/09/2026 10:20 رصيدك 80,000 YER",
+      },
+      genericTemplate(),
+    ],
+  },
+  {
+    code: "cash",
+    name: "كاش",
+    senderIds: ["Cash", "CASH-YE"],
+    templates: [
+      {
+        name: "تحويل إلى المحفظة",
+        pattern:
+          `تم تحويل مبلغ\\s*(?<amount>${NUM})\\s*${CUR}\\s*إلى محفظتك من الرقم\\s*(?<senderPhone>\\d{9,12})` +
+          `[.\\s]*رقم العملية\\s*:?\\s*${REF}` +
+          "(?:[.\\s]*التاريخ\\s*(?<date>[\\d/.-]+)\\s*الساعة\\s*(?<time>\\d{1,2}:\\d{2}))?",
+        flags: "iu",
+        priority: 10,
+        isActive: true,
+        sampleText:
+          "عزيزي العميل، تم تحويل مبلغ 10,000 ر.ي إلى محفظتك من الرقم 733123456. رقم العملية 55667788. التاريخ 16-09-2026 الساعة 09:15",
+      },
+      genericTemplate(),
+    ],
+  },
+  {
+    code: "onecash",
+    name: "ون كاش",
+    senderIds: ["ONECash", "ONE Cash"],
+    templates: [
+      {
+        name: "استلام مبلغ",
+        pattern:
+          `استلمت\\s*(?<amount>${NUM})\\s*${CUR}\\s*من\\s*(?<senderPhone>\\d{9,12})` +
+          "(?:\\s*-\\s*(?<senderName>[^.]+?))?" +
+          `[.\\s]*المرجع\\s*:?\\s*${REF}` +
+          `(?:[.\\s]*الرصيد الحالي\\s*:?\\s*(?<balance>${NUM}))?`,
+        flags: "iu",
+        priority: 10,
+        isActive: true,
+        sampleText: "استلمت 15000 ريال من 700123456 - سالم قاسم. المرجع: ONE-2233445. الرصيد الحالي 45000 ريال",
+      },
+      genericTemplate(),
+    ],
+  },
+  {
+    code: "jawali",
+    name: "جوالي",
+    senderIds: ["Jawali", "JAWALI"],
+    templates: [
+      {
+        name: "Received (EN)",
+        pattern:
+          `You have received\\s*(?<amount>${NUM})\\s*(?<currency>YER|SAR|USD)?\\s*from\\s*(?<senderPhone>\\d{9,12})` +
+          "(?:\\s*\\((?<senderName>[^)]+)\\))?" +
+          `[.\\s]*Ref\\.?\\s*:?\\s*${REF}` +
+          `(?:[.\\s]*Balance\\s*:?\\s*(?<balance>${NUM})\\s*(?:YER|SAR|USD)?)?` +
+          "(?:[^\\d]*(?<date>\\d{1,2}[-/]\\d{1,2}[-/]\\d{4}|\\d{4}[-/]\\d{2}[-/]\\d{2})\\s+(?<time>\\d{1,2}:\\d{2}))?",
+        flags: "iu",
+        priority: 10,
+        isActive: true,
+        sampleText: "You have received 20,000 YER from 770123456. Ref: JW123456. Balance: 60,000 YER. 16/09/2026 12:00",
+      },
+      genericTemplate(),
+    ],
+  },
+];

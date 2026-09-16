@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users         User[]
+  phones        PhoneNumber[]
+  wallets       BusinessWallet[]
+  rawMessages   RawMessage[]
+  transfers     Transfer[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+/// role: OWNER | MANAGER | ACCOUNTANT | EMPLOYEE
+model User {
+  id           String   @id @default(cuid())
+  businessId   String?
+  business     Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  username     String   @unique
+  fullName     String
+  passwordHash String
+  role         String   @default("EMPLOYEE")
+  isSuperAdmin Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  sessions       Session[]
+  notifications  Notification[]
+  transferEvents TransferEvent[]
+  auditLogs      AuditLog[]
+  rawMessages    RawMessage[]
+
+  @@index([businessId])
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// status: PENDING | VERIFIED | DISABLED
+model PhoneNumber {
+  id               String    @id @default(cuid())
+  businessId       String
+  business         Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  number           String    @unique
+  label            String?
+  status           String    @default("PENDING")
+  verificationCode String
+  apiKeyHash       String    @unique
+  apiKeyPrefix     String
+  hmacSecret       String?
+  verifiedAt       DateTime?
+  lastSeenAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  rawMessages RawMessage[]
+  transfers   Transfer[]
+
+  @@index([businessId])
+}
+
+/// Global catalog of supported e-wallets. senderIds is a JSON array of strings.
+model Wallet {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  senderIds String   @default("[]")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  templates   MessageTemplate[]
+  businesses  BusinessWallet[]
+  rawMessages RawMessage[]
+  transfers   Transfer[]
+}
+
+/// Regex with named groups: amount, currency, senderName, senderPhone, reference, date, time, account, balance
+model MessageTemplate {
+  id         String   @id @default(cuid())
+  walletId   String
+  wallet     Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  name       String
+  pattern    String
+  flags      String   @default("iu")
+  priority   Int      @default(0)
+  isActive   Boolean  @default(true)
+  sampleText String?
+  createdAt  DateTime @default(now())
+
+  rawMessages RawMessage[]
+
+  @@index([walletId])
+}
+
+model BusinessWallet {
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  walletId   String
+  wallet     Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  isEnabled  Boolean  @default(true)
+
+  @@id([businessId, walletId])
+}
+
+/// source: WEBHOOK | MANUAL
+/// status: PARSED | UNMATCHED | VERIFICATION | DUPLICATE_TRANSFER
+model RawMessage {
+  id            String      @id @default(cuid())
+  businessId    String
+  business      Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  phoneNumberId String
+  phoneNumber   PhoneNumber @relation(fields: [phoneNumberId], references: [id], onDelete: Cascade)
+  sender        String
+  text          String
+  receivedAt    DateTime
+  source        String      @default("WEBHOOK")
+  textHash      String
+  externalId    String?
+  status        String
+  walletId      String?
+  wallet        Wallet?     @relation(fields: [walletId], references: [id], onDelete: SetNull)
+  templateId    String?
+  template      MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  createdById   String?
+  createdBy     User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime    @default(now())
+
+  transfer Transfer?
+
+  @@index([businessId, receivedAt])
+  @@index([phoneNumberId, textHash])
+  @@index([phoneNumberId, externalId])
+}
+
+/// status: NEW | REVIEWED | CONFIRMED | REJECTED
+model Transfer {
+  id            String      @id @default(cuid())
+  businessId    String
+  business      Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  phoneNumberId String
+  phoneNumber   PhoneNumber @relation(fields: [phoneNumberId], references: [id], onDelete: Cascade)
+  rawMessageId  String      @unique
+  rawMessage    RawMessage  @relation(fields: [rawMessageId], references: [id], onDelete: Cascade)
+  walletId      String
+  wallet        Wallet      @relation(fields: [walletId], references: [id])
+  amount        Float
+  currency      String      @default("YER")
+  senderName    String?
+  senderPhone   String?
+  reference     String?
+  transferredAt DateTime
+  account       String?
+  balanceAfter  Float?
+  status        String      @default("NEW")
+  note          String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  events        TransferEvent[]
+  notifications Notification[]
+
+  @@unique([businessId, walletId, reference])
+  @@index([businessId, transferredAt])
+  @@index([businessId, status])
+}
+
+model TransferEvent {
+  id         String   @id @default(cuid())
+  transferId String
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fromStatus String?
+  toStatus   String
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([transferId])
+}
+
+model Notification {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transferId String?
+  transfer   Transfer? @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  title      String
+  body       String
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String?
+  entityId   String?
+  details    String?
+  ip         String?
+  createdAt  DateTime  @default(now())
+
+  @@index([businessId, createdAt])
+}
