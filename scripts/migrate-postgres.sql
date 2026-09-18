@@ -7,3 +7,5 @@ UPDATE "Business"
    SET "publicId" = 'WSL-B-' || upper(substr(md5(id || clock_timestamp()::text), 1, 6))
  WHERE "publicId" IS NULL;
 ALTER TABLE "Business" ALTER COLUMN "publicId" SET NOT NULL;
+-- Prisma names @unique indexes <Table>_<column>_key; creating it here means `db push` sees the schema already in sync.
+CREATE UNIQUE INDEX IF NOT EXISTS "Business_publicId_key" ON "Business"("publicId");
