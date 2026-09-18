@@ -30,6 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       nav={nav}
       user={user}
       businessName={user.businessName ?? ""}
+      businessPublicId={user.businessPublicId}
       footerLink={user.isSuperAdmin ? { href: "/admin", label: "لوحة المشرف ←" } : undefined}
       topRight={
         <LiveNotifications

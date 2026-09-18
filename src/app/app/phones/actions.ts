@@ -6,21 +6,23 @@ import { requirePermission } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { generateApiKey, generateVerificationCode, randomToken } from "@/lib/auth/tokens";
 import { addPhoneSchema, firstErrors } from "@/lib/validation";
+import { businessLimits } from "@/lib/licensing/service";
 import type { ActionState } from "@/components/form";
 
 export type PhoneActionState =
   | (NonNullable<ActionState> & { secret?: { apiKey: string; hmacSecret?: string; number: string } })
   | null;
 
-const MAX_PHONES_PER_BUSINESS = 5;
-
 export async function addPhone(_prev: PhoneActionState, formData: FormData): Promise<PhoneActionState> {
   const user = await requirePermission("phones.manage");
   const parsed = addPhoneSchema.safeParse({ number: formData.get("number"), label: formData.get("label") });
   if (!parsed.success) return { ok: false, errors: firstErrors(parsed.error) };
 
-  const count = await db.phoneNumber.count({ where: { businessId: user.businessId } });
-  if (count >= MAX_PHONES_PER_BUSINESS) return { ok: false, message: `الحد الأقصى ${MAX_PHONES_PER_BUSINESS} أرقام لكل منشأة في هذه الباقة.` };
+  const [count, limits] = await Promise.all([
+    db.phoneNumber.count({ where: { businessId: user.businessId, status: { not: "DISABLED" } } }),
+    businessLimits(user.businessId),
+  ]);
+  if (count >= limits.maxPhones) return { ok: false, message: `ترخيصك يسمح بـ ${limits.maxPhones} رقم. تواصل مع مالك النظام لرفع الحد.` };
 
   const existing = await db.phoneNumber.findUnique({ where: { number: parsed.data.number } });
   if (existing) {

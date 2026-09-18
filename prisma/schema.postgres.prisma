@@ -9,10 +9,19 @@ datasource db {
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
+/// status: PENDING | ACTIVE | SUSPENDED | REJECTED  (activation is decided by the platform owner only)
 model Business {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  publicId     String    @unique
+  name         String
+  status       String    @default("PENDING")
+  contactPhone String?
+  contactNote  String?
+  activatedAt  DateTime?
+  reviewNote   String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
 
   users         User[]
   phones        PhoneNumber[]
@@ -21,20 +30,90 @@ model Business {
   transfers     Transfer[]
   notifications Notification[]
   auditLogs     AuditLog[]
+  licenses      License[]
+  installations Installation[]
+  devices       Device[]
+}
+
+/// status: PENDING | ACTIVE | SUSPENDED | EXPIRED
+model License {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  plan        String    @default("أساسية")
+  status      String    @default("ACTIVE")
+  maxPhones   Int       @default(5)
+  maxUsers    Int       @default(10)
+  maxDevices  Int       @default(3)
+  issuedAt    DateTime  @default(now())
+  activatedAt DateTime?
+  expiresAt   DateTime?
+  lastCheckAt DateTime?
+  note        String?
+  issuedById  String?
+
+  installations Installation[]
+  devices       Device[]
+
+  @@index([businessId])
+}
+
+/// A deployment of Wasel software at the client (on-site server, desktop notifier install…). status: ACTIVE | BLOCKED
+model Installation {
+  id         String    @id @default(cuid())
+  publicId   String    @unique
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  licenseId  String?
+  license    License?  @relation(fields: [licenseId], references: [id], onDelete: SetNull)
+  name       String
+  status     String    @default("ACTIVE")
+  appVersion String?
+  lastSeenAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  devices Device[]
+
+  @@index([businessId])
+}
+
+/// A device that checks in with the central server. kind: PHONE | DESKTOP | SERVER | OTHER · status: ACTIVE | BLOCKED
+model Device {
+  id             String        @id @default(cuid())
+  publicId       String        @unique
+  businessId     String
+  business       Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  installationId String?
+  installation   Installation? @relation(fields: [installationId], references: [id], onDelete: SetNull)
+  licenseId      String?
+  license        License?      @relation(fields: [licenseId], references: [id], onDelete: SetNull)
+  kind           String        @default("OTHER")
+  name           String
+  fingerprint    String?
+  platform       String?
+  appVersion     String?
+  status         String        @default("ACTIVE")
+  tokenHash      String        @unique
+  lastSeenAt     DateTime?
+  lastIp         String?
+  createdAt      DateTime      @default(now())
+
+  @@index([businessId])
 }
 
 /// role: OWNER | MANAGER | ACCOUNTANT | EMPLOYEE
 model User {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   businessId   String?
   business     Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  username     String   @unique
+  username     String    @unique
   fullName     String
   passwordHash String
-  role         String   @default("EMPLOYEE")
-  isSuperAdmin Boolean  @default(false)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  role         String    @default("EMPLOYEE")
+  isSuperAdmin Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
 
   sessions       Session[]
   notifications  Notification[]
@@ -124,25 +203,25 @@ model BusinessWallet {
 /// source: WEBHOOK | MANUAL
 /// status: PARSED | UNMATCHED | VERIFICATION | DUPLICATE_TRANSFER
 model RawMessage {
-  id            String      @id @default(cuid())
+  id            String           @id @default(cuid())
   businessId    String
-  business      Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business      Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
   phoneNumberId String
-  phoneNumber   PhoneNumber @relation(fields: [phoneNumberId], references: [id], onDelete: Cascade)
+  phoneNumber   PhoneNumber      @relation(fields: [phoneNumberId], references: [id], onDelete: Cascade)
   sender        String
   text          String
   receivedAt    DateTime
-  source        String      @default("WEBHOOK")
+  source        String           @default("WEBHOOK")
   textHash      String
   externalId    String?
   status        String
   walletId      String?
-  wallet        Wallet?     @relation(fields: [walletId], references: [id], onDelete: SetNull)
+  wallet        Wallet?          @relation(fields: [walletId], references: [id], onDelete: SetNull)
   templateId    String?
   template      MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   createdById   String?
-  createdBy     User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt     DateTime    @default(now())
+  createdBy     User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime         @default(now())
 
   transfer Transfer?
 

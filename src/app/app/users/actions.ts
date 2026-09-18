@@ -7,6 +7,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { audit } from "@/lib/audit";
 import { canManageRole, isRole } from "@/lib/permissions";
 import { createUserSchema, firstErrors, passwordSchema, roleSchema } from "@/lib/validation";
+import { businessLimits } from "@/lib/licensing/service";
 import type { ActionState } from "@/components/form";
 
 export async function createUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -22,6 +23,11 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
   if (await db.user.findUnique({ where: { username: parsed.data.username } })) {
     return { ok: false, errors: { username: "اسم المستخدم محجوز." } };
   }
+  const [activeCount, limits] = await Promise.all([
+    db.user.count({ where: { businessId: actor.businessId, isActive: true } }),
+    businessLimits(actor.businessId),
+  ]);
+  if (activeCount >= limits.maxUsers) return { ok: false, message: `ترخيصك يسمح بـ ${limits.maxUsers} مستخدم نشط. تواصل مع مالك النظام لرفع الحد.` };
   const user = await db.user.create({
     data: {
       businessId: actor.businessId,

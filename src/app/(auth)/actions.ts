@@ -8,6 +8,7 @@ import { createSession, destroySession, getCurrentUser } from "@/lib/auth/sessio
 import { audit } from "@/lib/audit";
 import { rateLimit } from "@/lib/rate-limit";
 import { firstErrors, loginSchema, registerSchema } from "@/lib/validation";
+import { businessPublicId } from "@/lib/licensing/ids";
 import type { ActionState } from "@/components/form";
 
 async function clientIp(): Promise<string> {
@@ -34,12 +35,15 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
 
   await createSession(user.id);
   await audit({ action: "LOGIN", businessId: user.businessId, userId: user.id, ip });
+  // /app itself redirects to /activation when the business is not active.
   redirect(user.businessId ? "/app" : user.isSuperAdmin ? "/admin" : "/login");
 }
 
 export async function register(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = registerSchema.safeParse({
     businessName: formData.get("businessName"),
+    contactPhone: formData.get("contactPhone"),
+    contactNote: formData.get("contactNote"),
     fullName: formData.get("fullName"),
     username: formData.get("username"),
     password: formData.get("password"),
@@ -56,7 +60,15 @@ export async function register(_prev: ActionState, formData: FormData): Promise<
   }
 
   const { business, owner } = await db.$transaction(async (tx) => {
-    const business = await tx.business.create({ data: { name: parsed.data.businessName } });
+    const business = await tx.business.create({
+      data: {
+        publicId: businessPublicId(),
+        name: parsed.data.businessName,
+        status: "PENDING",
+        contactPhone: parsed.data.contactPhone,
+        contactNote: parsed.data.contactNote || null,
+      },
+    });
     const owner = await tx.user.create({
       data: {
         businessId: business.id,
@@ -70,8 +82,17 @@ export async function register(_prev: ActionState, formData: FormData): Promise<
   });
 
   await createSession(owner.id);
-  await audit({ action: "BUSINESS_REGISTERED", businessId: business.id, userId: owner.id, entityType: "Business", entityId: business.id, ip });
-  redirect("/app?welcome=1");
+  await audit({
+    action: "BUSINESS_REGISTERED",
+    businessId: business.id,
+    userId: owner.id,
+    entityType: "Business",
+    entityId: business.id,
+    ip,
+    details: { publicId: business.publicId, contactPhone: business.contactPhone },
+  });
+  // New businesses wait for the platform owner's approval.
+  redirect("/activation");
 }
 
 export async function logout(): Promise<void> {

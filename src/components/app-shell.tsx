@@ -9,6 +9,7 @@ export function AppShell({
   nav,
   user,
   businessName,
+  businessPublicId,
   topRight,
   children,
   footerLink,
@@ -16,6 +17,7 @@ export function AppShell({
   nav: NavItem[];
   user: { fullName: string; username: string; role: string; isSuperAdmin: boolean };
   businessName: string;
+  businessPublicId?: string | null;
   topRight?: ReactNode;
   children: ReactNode;
   footerLink?: { href: string; label: string };
@@ -30,6 +32,7 @@ export function AppShell({
         <div className="mb-5 px-3">
           <div className="text-[11px] font-medium uppercase tracking-wide text-white/40">المنشأة</div>
           <div className="mt-0.5 truncate text-sm font-medium text-white/90">{businessName}</div>
+          {businessPublicId && <div className="mt-0.5 font-mono text-[11px] text-white/40 ltr text-start">{businessPublicId}</div>}
         </div>
         <SidebarNav items={nav} />
         <div className="mt-auto space-y-1 border-t border-white/10 px-3 pt-4">

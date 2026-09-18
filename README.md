@@ -29,6 +29,30 @@ pnpm dev              # http://localhost:3000
 مفتاح الرقم التجريبي الموثّق `967777123456`:
 `wsl_demo_0123456789abcdef0123456789abcdef01234567`
 
+## التفعيل والترخيص
+
+النظام ليس مفتوحًا لمن يملك الرابط:
+
+- التسجيل ينشئ المنشأة وحساب المالك بحالة **بانتظار التفعيل** (`WSL-B-XXXXXX`). يظهر الطلب في لوحة مالك النظام `/admin` مع رقم التواصل.
+- مالك النظام وحده: **يراجع، يوافق (ويُصدر الترخيص الأول)، يرفض، يوقف لاحقًا، يعيد التفعيل، ويدير التراخيص والتركيبات والأجهزة.**
+- كل طلب صفحة أو إجراء أو رسالة واردة (`/api/ingest/sms`) يتحقق من `المنشأة ACTIVE ∧ ترخيص ساري` على الخادم؛ غير ذلك يُحوَّل المستخدم إلى `/activation` وتُرفض الرسائل بـ `403 BUSINESS_NOT_ACTIVE`. لا توجد قيمة محلية يمكن تعديلها لتجاوز ذلك.
+- **الترخيص** (`WSL-XXXX-XXXX-XXXX`): حالته `ACTIVE | PENDING | SUSPENDED | EXPIRED`، مع باقة وتاريخ انتهاء وحدود (أرقام، مستخدمون، أجهزة). الانتهاء يُقيَّم عند كل طلب.
+- **التركيب** (`WSL-I-…`) و**الجهاز** (`WSL-D-…`): يُسجَّلان من البرنامج المثبَّت لدى العميل عبر الواجهة المركزية، ولكل جهاز رمز سري وحالة `ACTIVE | BLOCKED`.
+
+### واجهة الترخيص المركزية (للبرامج المثبَّتة)
+
+```http
+POST /api/license/activate      { licenseKey, installation?: {name} | installationId, device: {kind, name, fingerprint, platform, appVersion} }
+  → { ok, status, installationId, deviceId, deviceToken, license, business, checkIntervalSec, graceSec, serverTime, alg: "Ed25519", signature }
+POST /api/license/check         X-Device-Token: wsd_…   { nonce, appVersion }
+  → { ok, status: ACTIVE|PENDING|SUSPENDED|EXPIRED|REJECTED|NO_LICENSE|BLOCKED, nonce, serverTime, license, business, deviceId, deviceStatus, …, signature }
+GET  /api/license/public-key    → { alg, publicKey (SPKI base64), publicKeyRaw (32 bytes base64) }
+```
+
+كل رد موقّع بـ **Ed25519** فوق JSON قانوني (مفاتيح مرتبة أبجديًا بلا مسافات). البرنامج يضمّن المفتاح العام، ويتحقق من التوقيع و`nonce` و`serverTime`، ويتوقف إذا كانت الحالة ≠ `ACTIVE` أو مضت `graceSec` (3 أيام) دون فحص ناجح. الشرح الكامل ومثال التحقق في `/admin/licensing`.
+
+المتغير `LICENSE_SIGNING_SEED` (64 خانة hex = 32 بايت) **إلزامي في الإنتاج** ولا يُغيَّر بعد توزيع أي برنامج.
+
 ## واجهة الاستقبال (Webhook)
 
 كل رسالة SMS واردة تُرسل إلى الخادم بواسطة الجهة التي تمرر الرسائل (تطبيق أندرويد، GSM gateway، أو webhook من شركة الاتصالات):
@@ -101,7 +125,7 @@ pnpm build && pnpm start      # http://localhost:3000
   البناء على Vercel يستخدم `vercel-build`: مخطط Postgres (`prisma/schema.postgres.prisma`، مولَّد من `schema.prisma`) → `db push` → البذر → `next build`.
   الإشعارات الفورية تعمل على serverless عبر استقصاء قاعدة البيانات كل 3 ثوانٍ (يعاد الاتصال تلقائيًا كل ~50 ثانية).
 - **Railway / أي Docker host:** المستودع يحتوي `Dockerfile` و`railway.json`. أنشئ خدمة من هذا المستودع، أضف Volume على المسار `/data`، واضبط المتغيرات:
-  `DATABASE_URL=file:/data/wasel.db` · `ADMIN_USERNAME` · `ADMIN_PASSWORD` (اختياري: `SEED_DEMO=true` لإضافة المنشأة التجريبية).
+  `DATABASE_URL=file:/data/wasel.db` · `ADMIN_USERNAME` · `ADMIN_PASSWORD` · `LICENSE_SIGNING_SEED` (اختياري: `SEED_DEMO=true` لإضافة المنشأة التجريبية).
   عند كل تشغيل يُنفَّذ `prisma db push` ثم البذر (المحافظ + المشرف إن لم يوجدا) ثم `next start`. فحص الصحة: `/api/health`.
 - Render / Fly.io: نفس الصورة مع قرص دائم على `/data`. Vercel لا يحفظ SQLite بين الطلبات — استخدم Postgres هناك.
 

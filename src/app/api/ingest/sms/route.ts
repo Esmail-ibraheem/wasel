@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { hmacHex, safeEqualHex, sha256Hex } from "@/lib/auth/tokens";
 import { ingestSms } from "@/lib/ingest";
 import { rateLimit } from "@/lib/rate-limit";
+import { getBusinessAccess } from "@/lib/licensing/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -37,6 +38,10 @@ export async function POST(req: Request) {
   const phone = await db.phoneNumber.findUnique({ where: { apiKeyHash: sha256Hex(apiKey) } });
   if (!phone) return json(401, { ok: false, error: "INVALID_API_KEY" });
   if (phone.status === "DISABLED") return json(403, { ok: false, error: "PHONE_DISABLED" });
+
+  // Licensing is enforced centrally: a pending, suspended, rejected or expired business receives nothing.
+  const access = await getBusinessAccess(phone.businessId);
+  if (!access.ok) return json(403, { ok: false, error: "BUSINESS_NOT_ACTIVE", status: access.status });
 
   const rawBody = await req.text();
   if (phone.hmacSecret) {

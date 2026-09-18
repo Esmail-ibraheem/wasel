@@ -28,6 +28,18 @@ export const AUDIT_ACTIONS = {
   WALLET_UPDATED: "تعديل محفظة",
   SETTINGS_UPDATED: "تعديل الإعدادات",
   EXPORT: "تصدير بيانات",
+  BUSINESS_APPROVED: "الموافقة على منشأة",
+  BUSINESS_REJECTED: "رفض منشأة",
+  BUSINESS_SUSPENDED: "إيقاف منشأة",
+  BUSINESS_REACTIVATED: "إعادة تفعيل منشأة",
+  BUSINESS_UPDATED: "تعديل بيانات منشأة",
+  LICENSE_ISSUED: "إصدار ترخيص",
+  LICENSE_UPDATED: "تعديل ترخيص",
+  INSTALLATION_REGISTERED: "تسجيل تركيب",
+  INSTALLATION_UPDATED: "تعديل تركيب",
+  DEVICE_REGISTERED: "تسجيل جهاز",
+  DEVICE_UPDATED: "تعديل جهاز",
+  LICENSE_ACTIVATION_FAILED: "محاولة تفعيل فاشلة",
 } as const;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;

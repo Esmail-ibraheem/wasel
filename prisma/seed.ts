@@ -4,6 +4,8 @@ import { hashPassword } from "../src/lib/auth/password";
 import { generateApiKey, sha256Hex } from "../src/lib/auth/tokens";
 import { SEED_WALLETS } from "../src/lib/parser/seed-templates";
 import { ingestSms } from "../src/lib/ingest";
+import { businessPublicId } from "../src/lib/licensing/ids";
+import { issueLicense } from "../src/lib/licensing/service";
 
 const db = new PrismaClient();
 
@@ -59,7 +61,18 @@ async function main() {
     return;
   }
 
-  const biz = await db.business.create({ data: { name: "متجر النور للإلكترونيات" } });
+  const biz = await db.business.create({
+    data: {
+      publicId: businessPublicId(),
+      name: "متجر النور للإلكترونيات",
+      status: "ACTIVE",
+      contactPhone: "777123456",
+      contactNote: "صنعاء — إلكترونيات وأجهزة",
+      activatedAt: new Date(),
+    },
+  });
+  const demoLicense = await issueLicense({ businessId: biz.id, plan: "تجريبية", days: 365, maxPhones: 5, maxUsers: 10, maxDevices: 3, note: "ترخيص المنشأة التجريبية" });
+  console.log(`demo business ${biz.publicId} · license ${demoLicense.key}`);
   const owner = await db.user.create({
     data: { businessId: biz.id, username: "owner", fullName: "عبدالله النور", passwordHash: hashPassword("Owner@12345"), role: "OWNER" },
   });

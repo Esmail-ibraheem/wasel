@@ -5,7 +5,8 @@ import type { NavItem } from "@/components/sidebar-nav";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requireSuperAdmin();
   const nav: NavItem[] = [
-    { href: "/admin", label: "المنشآت", icon: "building", exact: true },
+    { href: "/admin", label: "المنشآت والتراخيص", icon: "building", exact: true },
+    { href: "/admin/licensing", label: "واجهة الترخيص", icon: "admin" },
     { href: "/admin/wallets", label: "المحافظ والأنماط", icon: "wallet" },
     { href: "/admin/tester", label: "اختبار التحليل", icon: "messages" },
     { href: "/admin/account", label: "حساب المشرف", icon: "settings" },

@@ -22,6 +22,7 @@ const HEARTBEAT_MS = 25_000;
 export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user || !user.businessId) return new Response("unauthorized", { status: 401 });
+  if (!user.access.ok) return new Response("business not active", { status: 403 });
   const businessId = user.businessId;
   const userId = user.id;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { ActionForm, SubmitButton } from "@/components/form";
-import { Field, Input } from "@/components/ui";
+import { Field, Input, Textarea } from "@/components/ui";
 import { register } from "../actions";
 
 export function RegisterForm() {
@@ -15,6 +15,12 @@ export function RegisterForm() {
           <Field label="اسمك الكامل" error={state?.errors?.fullName}>
             <Input name="fullName" required autoComplete="name" />
           </Field>
+          <Field label="رقم التواصل" hint="سنتواصل معك عليه لمراجعة الطلب وتفعيل الحساب" error={state?.errors?.contactPhone}>
+            <Input name="contactPhone" required inputMode="tel" dir="ltr" className="text-start" placeholder="777123456" />
+          </Field>
+          <Field label="عن المنشأة (اختياري)" hint="المدينة، النشاط، عدد الفروع…" error={state?.errors?.contactNote}>
+            <Textarea name="contactNote" className="min-h-20" />
+          </Field>
           <Field label="اسم المستخدم" hint="أحرف إنجليزية صغيرة وأرقام فقط" error={state?.errors?.username}>
             <Input name="username" required autoComplete="username" dir="ltr" className="text-start" />
           </Field>
@@ -26,9 +32,10 @@ export function RegisterForm() {
               <Input name="confirm" type="password" required autoComplete="new-password" dir="ltr" className="text-start" />
             </Field>
           </div>
-          <SubmitButton className="w-full" pendingText="جارٍ إنشاء الحساب…">
-            إنشاء حساب المنشأة
+          <SubmitButton className="w-full" pendingText="جارٍ إرسال الطلب…">
+            إرسال طلب التفعيل
           </SubmitButton>
+          <p className="text-xs text-muted">بعد الإرسال يبقى الحساب بانتظار التفعيل حتى يراجعه مالك النظام ويوافق عليه.</p>
         </>
       )}
     </ActionForm>

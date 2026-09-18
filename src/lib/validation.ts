@@ -21,6 +21,13 @@ export const loginSchema = z.object({
 export const registerSchema = z
   .object({
     businessName: z.string().trim().min(2, "اسم المنشأة قصير جدًا").max(120, "اسم المنشأة طويل جدًا"),
+    contactPhone: z
+      .string()
+      .trim()
+      .min(7, "أدخل رقم تواصل صحيحًا")
+      .max(20, "رقم التواصل طويل جدًا")
+      .regex(/^[+\d\s-]+$/, "أدخل رقم تواصل صحيحًا"),
+    contactNote: z.string().trim().max(500, "الملاحظة طويلة جدًا").optional().or(z.literal("")),
     fullName: fullNameSchema,
     username: usernameSchema,
     password: passwordSchema,

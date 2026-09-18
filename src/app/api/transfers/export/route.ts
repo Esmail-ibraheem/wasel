@@ -15,6 +15,7 @@ function csvCell(v: unknown): string {
 export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user || !user.businessId) return new Response("unauthorized", { status: 401 });
+  if (!user.access.ok) return new Response("business not active", { status: 403 });
   if (!can(user.role, "transfers.export")) return new Response("forbidden", { status: 403 });
 
   const url = new URL(req.url);

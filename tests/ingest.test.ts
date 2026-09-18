@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { ingestSms } from "@/lib/ingest";
 import { SEED_WALLETS } from "@/lib/parser/seed-templates";
 import { subscribe } from "@/lib/events";
+import { businessPublicId } from "@/lib/licensing/ids";
 
 const JAIB_TEXT =
   "تم استلام مبلغ 50,000 ريال يمني من 777123456 (أحمد محمد). رقم العملية: 123456789. الرصيد: 120,000 ريال. 2026-09-16 14:35";
@@ -47,9 +48,9 @@ beforeAll(async () => {
     });
   }
 
-  const biz = await db.business.create({ data: { name: "متجر الاختبار" } });
+  const biz = await db.business.create({ data: { publicId: businessPublicId(), name: "متجر الاختبار", status: "ACTIVE" } });
   businessId = biz.id;
-  const other = await db.business.create({ data: { name: "منشأة أخرى" } });
+  const other = await db.business.create({ data: { publicId: businessPublicId(), name: "منشأة أخرى", status: "ACTIVE" } });
   otherBusinessId = other.id;
 
   const owner = await db.user.create({

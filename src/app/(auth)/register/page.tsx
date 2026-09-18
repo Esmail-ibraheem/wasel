@@ -9,7 +9,7 @@ export default function RegisterPage() {
     <div>
       <h1 className="font-display text-3xl font-semibold">تسجيل منشأة جديدة</h1>
       <p className="mt-2 text-sm text-muted">
-        أنشئ حساب المنشأة وحساب المالك. بعدها تربط رقم الهاتف الذي تصل إليه رسائل التحويل وتضيف موظفيك.
+        أنشئ حساب المنشأة وحساب المالك وأرسل طلب التفعيل. بعد الموافقة تربط رقم الهاتف الذي تصل إليه رسائل التحويل وتضيف موظفيك.
       </p>
       <div className="mt-8">
         <RegisterForm />
