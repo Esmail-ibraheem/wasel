@@ -70,3 +70,22 @@ Vitest: parser (normalization, each seeded template, date parsing), permissions,
 
 ## Out of scope (v1)
 Android forwarder, official wallet API verification, invoice linking, Excel/PDF export, data-retention job, multi-instance SSE.
+
+---
+
+## Addendum 2026-09-18 — Licensing & activation
+
+**Requirement (owner):** the system must not be usable by anyone who merely has the URL. A new client is created in a *pending activation* state; only the platform owner may review, approve, reject, suspend, and manage the client's devices and licenses. Verification must be central (server-side), never a value stored on the client machine. Every company, installation, device and license has a unique id and a visible status.
+
+**Model additions**
+- `Business.status` PENDING → ACTIVE | REJECTED | SUSPENDED; `publicId` `WSL-B-XXXXXX`; `contactPhone`, `contactNote`, `reviewNote`, `reviewedById/At`, `activatedAt`.
+- `License` (`WSL-XXXX-XXXX-XXXX`): status ACTIVE | PENDING | SUSPENDED | EXPIRED, plan, `expiresAt`, `maxPhones/maxUsers/maxDevices`, `lastCheckAt`.
+- `Installation` (`WSL-I-…`) and `Device` (`WSL-D-…`, kind PHONE|DESKTOP|SERVER|OTHER, `tokenHash`, status ACTIVE | BLOCKED, `lastSeenAt`, `lastIp`).
+
+**Access rule (pure, `src/lib/licensing/access.ts`)**: usable ⇔ business ACTIVE ∧ ∃ license ACTIVE with `expiresAt` null or in the future. Otherwise the status is PENDING / REJECTED / SUSPENDED / EXPIRED / NO_LICENSE. Expired licenses are lazily flipped to EXPIRED when observed.
+
+**Enforcement points**: `requireUser()` (all tenant pages + server actions) → `/activation`; `/api/ingest/sms` → `403 BUSINESS_NOT_ACTIVE`; `/api/events` and `/api/transfers/export` → 403. Phone/user creation respects license limits.
+
+**Central verification API** (`/api/license/*`): `activate` registers installation+device for a license key and returns a device token; `check` is the heartbeat; every response is Ed25519-signed over canonical JSON with `nonce` + `serverTime`, public key at `/api/license/public-key` and in `/admin/licensing`. Private key derived from `LICENSE_SIGNING_SEED` (required in production). Client policy: stop if status ≠ ACTIVE or no valid signed ACTIVE within `graceSec` (3 days); check every `checkIntervalSec` (6 h).
+
+**Admin**: `/admin` pending queue + businesses table; `/admin/businesses/[id]` approve (issues first license), reject/suspend with a note shown to the client, reactivate, issue/extend/suspend licenses, edit limits, block installations/devices. All actions audited.
