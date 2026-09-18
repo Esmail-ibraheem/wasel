@@ -15,7 +15,7 @@
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
     "samples:check": "tsx scripts/check-samples.ts",
     "schema:postgres": "tsx scripts/make-postgres-schema.ts",
-    "vercel-build": "prisma generate --schema=prisma/schema.postgres.prisma && prisma db push --schema=prisma/schema.postgres.prisma --skip-generate && tsx prisma/seed.ts && next build",
+    "vercel-build": "prisma generate --schema=prisma/schema.postgres.prisma && prisma db execute --schema=prisma/schema.postgres.prisma --file scripts/migrate-postgres.sql && prisma db push --schema=prisma/schema.postgres.prisma --skip-generate && tsx prisma/seed.ts && next build",
     "postinstall": "prisma generate"
   },
   "dependencies": {
